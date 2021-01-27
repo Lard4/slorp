@@ -1,7 +1,10 @@
-main.c:91:5:main	16	static
-main.c:204:6:SystemClock_Config	120	static
-main.c:260:13:MX_GPIO_Init	40	static
-main.c:292:6:StartDefaultTask	16	static
-main.c:310:6:sendPulse	24	static
-main.c:332:6:HAL_TIM_PeriodElapsedCallback	16	static
-main.c:349:6:Error_Handler	4	static,ignoring_inline_asm
+main.c:129:5:main	16	static
+main.c:240:6:SystemClock_Config	120	static
+main.c:296:13:MX_GPIO_Init	40	static
+main.c:319:6:init_shared_memory	4	static
+main.c:323:5:get_M4	24	static
+main.c:342:5:put_M7	24	static
+main.c:369:6:StartDefaultTask	16	static
+main.c:387:6:sendPulse	24	static
+main.c:415:6:HAL_TIM_PeriodElapsedCallback	16	static
+main.c:432:6:Error_Handler	4	static,ignoring_inline_asm

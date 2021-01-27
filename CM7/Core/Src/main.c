@@ -96,6 +96,11 @@ void sendPulse(void *argument);
 /* USER CODE BEGIN PFP */
 
 /**
+ * Initializes shared memory.
+ */
+void init_shared_memory(void);
+
+/**
  * Gets data from M4 to M7. Gets buff_size bytes from shared memory and stores
  * it into buffer.
  *
@@ -169,6 +174,8 @@ Error_Handler();
 /* USER CODE END Boot_Mode_Sequence_2 */
 
   /* USER CODE BEGIN SysInit */
+
+  init_shared_memory();
 
   /* USER CODE END SysInit */
 
@@ -298,6 +305,12 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin : B1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pin : LD3_Pin */
   GPIO_InitStruct.Pin = LD3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -309,37 +322,44 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void init_shared_memory() {
+    xfr_ptr->status_M7toM4 = SM_CLEAN;
+}
+
 int get_M4(uint8_t buffer[], uint32_t buff_size) {
+    // you can only read dirty data
 	if (xfr_ptr->status_M4toM7 == SM_DIRTY) {
 		xfr_ptr->status_M4toM7 = SM_LOCKED;
 
         // start transfer
-		for (int n = 0; n < buff_size; n++) {
-			buffer[n] = xfr_ptr->M4toM7[n];
-			xfr_ptr->M4toM7[n] = 0;
+        int i = 0;
+		for (i = 0; i < buff_size; i++) {
+			buffer[i] = xfr_ptr->M4toM7[i];
 		}
 
-		xfr_ptr->status_M4toM7 = EMPTY;
-        return n;
+        // mark data as clean
+		xfr_ptr->status_M4toM7 = SM_CLEAN;
+        return i;
 	} else {
-        return -1;
+        return 0;
     }
 }
 
 int put_M7(uint8_t buffer[], uint32_t buff_size) {
+    // only allowed to write if clean
 	if (xfr_ptr->status_M7toM4 == SM_CLEAN) {
-		xfr_ptr->status_M7toM4 = SM_DIRTY;
 
         // start transfer
-        for (int n = 0; n < buff_size; n++) {
-			xfr_ptr->M7toM4[n] = buffer[n];
-			buffer[n] = 0;
+        int i = 0;
+        for (i = 0; i < buff_size; i++) {
+			xfr_ptr->M7toM4[i] = buffer[i];
 		}
 
-		xfr_ptr->sts_7to4 = SM_CLEAN;
-        return n;
+        // mark as dirty
+		xfr_ptr->status_M7toM4 = SM_DIRTY;
+        return i;
 	} else {
-        return -1;
+        return 0;
     }
 }
 
@@ -378,9 +398,9 @@ void sendPulse(void *argument)
 
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
 
-      uint8_t buff[1] = {250};
+      uint8_t buff = 250;
 
-      if (put_M7(buff, 3) == 3) {
+      if (put_M7(&buff, 1) == 1) {
           HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
           osThreadExit();
       } else {

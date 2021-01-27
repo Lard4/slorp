@@ -94,6 +94,11 @@ void doBlink(void *argument);
 /* USER CODE BEGIN PFP */
 
 /**
+ * Initializes shared memory.
+ */
+void init_shared_memory(void);
+
+/**
  * Gets data from M7 to M4. Gets buff_size bytes from shared memory and stores
  * it into buffer.
  *
@@ -150,6 +155,8 @@ int main(void)
   /* USER CODE END Init */
 
   /* USER CODE BEGIN SysInit */
+
+  init_shared_memory();
 
   /* USER CODE END SysInit */
 
@@ -245,37 +252,44 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-int get_M7(static uint32_t buffer[SHARED_MEMORY_SIZE]) {
+void init_shared_memory(void) {
+    xfr_ptr->status_M4toM7 = SM_CLEAN;
+}
+
+int get_M7(uint8_t buffer[], uint32_t buff_size) {
+    // you can only read dirty data
 	if (xfr_ptr->status_M7toM4 == SM_DIRTY) {
 		xfr_ptr->status_M7toM4 = SM_LOCKED;
 
         // start transfer
-		for (int n = 0; n < SHARED_MEMORY_SIZE; n++) {
-			buffer[n] = xfr_ptr->M7toM4[n];
-			xfr_ptr->M7toM4[n] = 0;
+        int i = 0;
+		for (i = 0; i < buff_size; i++) {
+			buffer[i] = xfr_ptr->M7toM4[i];
 		}
 
-		xfr_ptr->status_M7toM4 = SM_EMPTY;
-        return 1;
+        // mark data as clean
+		xfr_ptr->status_M7toM4 = SM_CLEAN;
+        return i;
 	} else {
-        return -1;
+        return 0;
     }
 }
 
-int put_M4(uint32_t buffer[SHARED_MEMORY_SIZE]) {
+int put_M4(uint8_t buffer[], uint32_t buff_size) {
+    // only allowed to write if clean
 	if (xfr_ptr->status_M4toM7 == SM_CLEAN) {
-		xfr_ptr->status_M4toM7 = SM_DIRTY;
 
         // start transfer
-        for (int n = 0; n < SHARED_MEMORY_SIZE; n++) {
-			xfr_ptr->M4toM7[n] = buffer[n];
-			buffer[n] = 0;
+        int i = 0;
+        for (i = 0; i < buff_size; i++) {
+			xfr_ptr->M4toM7[i] = buffer[i];
 		}
 
-		xfr_ptr->status_M4toM7 = SM_CLEAN;
-        return 1;
+        // mark as dirty
+		xfr_ptr->status_M4toM7 = SM_DIRTY;
+        return i;
 	} else {
-        return -1;
+        return 0;
     }
 }
 
@@ -295,7 +309,6 @@ void StartDefaultTask(void *argument)
   for(;;)
   {
     osDelay(1);
-    osMessageQueueGet(periodReceiveHandle, &period, 0, 5000);
   }
   /* USER CODE END 5 */
 }
@@ -310,12 +323,18 @@ void StartDefaultTask(void *argument)
 void doBlink(void *argument)
 {
   /* USER CODE BEGIN doBlink */
+
+  uint8_t buff = 0;
+
+  while (get_M7(&buff, 1) != 1) {
+      // read the byte when it's available
+  }
   /* Infinite loop */
   for(;;)
   {
-	  if (period != 0) {
+	  if (buff != 0) {
 		  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-		  osDelay(period);
+		  osDelay(buff);
 	  } else {
           HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_1);
 		  osDelay(100);
