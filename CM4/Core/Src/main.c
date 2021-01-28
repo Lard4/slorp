@@ -74,10 +74,10 @@ const osThreadAttr_t blink_attributes = {
 
 // inter-core buffers
 typedef struct shared_memory {
-	uint8_t status_M4toM7;
-	uint8_t status_M7toM4;
-	uint8_t M4toM7[SHARED_MEMORY_SIZE];
-	uint8_t M7toM4[SHARED_MEMORY_SIZE];
+    uint8_t status_M4toM7;
+    uint8_t status_M7toM4;
+    uint8_t M4toM7[SHARED_MEMORY_SIZE];
+    uint8_t M7toM4[SHARED_MEMORY_SIZE];
 } SharedMemory;
 
 // pointer to shared memory struct (inter-core buffers and status)
@@ -258,37 +258,37 @@ void init_shared_memory(void) {
 
 int get_M7(uint8_t buffer[], uint32_t buff_size) {
     // you can only read dirty data
-	if (xfr_ptr->status_M7toM4 == SM_DIRTY) {
-		xfr_ptr->status_M7toM4 = SM_LOCKED;
+    if (xfr_ptr->status_M7toM4 == SM_DIRTY) {
+        xfr_ptr->status_M7toM4 = SM_LOCKED;
 
         // start transfer
         int i = 0;
-		for (i = 0; i < buff_size; i++) {
-			buffer[i] = xfr_ptr->M7toM4[i];
-		}
+        for (i = 0; i < buff_size; i++) {
+            buffer[i] = xfr_ptr->M7toM4[i];
+        }
 
         // mark data as clean
-		xfr_ptr->status_M7toM4 = SM_CLEAN;
+        xfr_ptr->status_M7toM4 = SM_CLEAN;
         return i;
-	} else {
+    } else {
         return 0;
     }
 }
 
 int put_M4(uint8_t buffer[], uint32_t buff_size) {
     // only allowed to write if clean
-	if (xfr_ptr->status_M4toM7 == SM_CLEAN) {
+    if (xfr_ptr->status_M4toM7 == SM_CLEAN) {
 
         // start transfer
         int i = 0;
         for (i = 0; i < buff_size; i++) {
-			xfr_ptr->M4toM7[i] = buffer[i];
-		}
+            xfr_ptr->M4toM7[i] = buffer[i];
+        }
 
         // mark as dirty
-		xfr_ptr->status_M4toM7 = SM_DIRTY;
+        xfr_ptr->status_M4toM7 = SM_DIRTY;
         return i;
-	} else {
+    } else {
         return 0;
     }
 }
@@ -320,27 +320,25 @@ void StartDefaultTask(void *argument)
 * @retval None
 */
 /* USER CODE END Header_doBlink */
-void doBlink(void *argument)
-{
-  /* USER CODE BEGIN doBlink */
+void doBlink(void *argument) {
+    /* USER CODE BEGIN doBlink */
 
-  uint8_t buff = 0;
+    uint8_t buff = 0;
 
-  while (get_M7(&buff, 1) != 1) {
-      // read the byte when it's available
-  }
-  /* Infinite loop */
-  for(;;)
-  {
-	  if (buff != 0) {
-		  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-		  osDelay(buff);
-	  } else {
-          HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_1);
-		  osDelay(100);
-	  }
-  }
-  /* USER CODE END doBlink */
+    while (get_M7(&buff, 1) != 1) {
+        // read the byte when it's available
+    }
+    /* Infinite loop */
+    for(;;) {
+        if (buff != 0) {
+            HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+            osDelay(buff);
+        } else {
+            HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_1);
+            osDelay(100);
+        }
+    }
+    /* USER CODE END doBlink */
 }
 
  /**
